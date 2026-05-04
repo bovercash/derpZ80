@@ -18,8 +18,6 @@
         
         .CodeMirror { flex: 1; height: 100%; font-size: 14px; font-family: 'Fira Code', 'Consolas', monospace; }
 
-        canvas { background: #222; width: 400px; height: 300px; margin: 20px auto; border: 2px solid #444; image-rendering: pixelated; }
-        #console { flex: 1; padding: 10px; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #0f0; overflow-y: auto; background: #050505; }
         button:hover { background: #4a7ecc; }
 
         .btn-primary-custom { background: #007acc; border: none; font-weight: 600; padding: 4px 12px; }
@@ -30,15 +28,33 @@
         #display-panel {
             padding: 5px;
         }
+
+        canvas { background: #222; width: 400px; height: 300px; margin: 20px auto; border: 2px solid #444; image-rendering: pixelated; }
         canvas:focus {
             outline: 2px solid #3461ad;
             border-color: #3461ad;
         }
 
         /* Console Header & Layout */
-        #console-wrapper { height: 100%; background: #111; border-top: 1px solid #444; display: flex; flex-direction: column; }
         #console-header { background: #1a1a1a; padding: 4px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-        #console { flex: 1; padding: 10px; font-family: monospace; overflow-y: auto; font-size: 12px; color: #0f0; }
+        #console-wrapper { 
+            height: 47%; 
+            background: #111; 
+            border-top: 1px solid #444; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 0; /* Crucial: allows flex items to shrink below their content size */
+        }
+
+        #console { 
+            flex: 1; 
+            padding: 10px; 
+            font-family: monospace; 
+            overflow-y: auto; /* Enables the scrollbar when content exceeds height */
+            font-size: 12px; 
+            color: #0f0; 
+            min-height: 0; /* Ensures the div respects the parent container's bounds */
+        }
         
     </style>
 </head>
@@ -167,7 +183,7 @@ MSG: DB "HELLO Z80 WORLD!", 0
 
     function clearLog() {
         document.getElementById('console').innerHTML = '';
-        log("Log cleared.");
+        log("Ready");
     }
 
     // --- Hardware Emulation ---
