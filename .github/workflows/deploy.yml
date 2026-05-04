@@ -1,0 +1,48 @@
+name: Build and Deploy IDE
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Pasmo WASM via Docker
+        run: |
+          mkdir -p ./dist/lib
+          docker build -t pasmo-builder ./builder
+          docker run --name pasmo-container pasmo-builder
+          docker cp pasmo-container:/pasmo/pasmo/pasmo.js ./dist/lib/
+          docker cp pasmo-container:/pasmo/pasmo/pasmo.wasm ./dist/lib/
+          # Beautify so the patch has a stable target
+          npx uglify-js ./dist/lib/pasmo.js -b -o ./dist/lib/pasmo.js
+          patch ./dist/lib/pasmo.js < pasmo.patch
+
+      - name: Fetch JS Dependencies
+        run: |
+          mkdir -p ./dist/lib/roms
+          curl -L https://raw.githubusercontent.com/DrGoldfire/Z80.js/refs/heads/master/Z80.js -o ./dist/lib/Z80.js
+
+      - name: Prepare Final Site
+        run: |
+          cp index.html ./dist/
+          cp Z80VM_ROM.asm ./dist/
+          cp Z80VM.ROM ./dist/
+
+      - name: Upload Pages Artifact
+        if: env.ACT != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        if: env.ACT != 'true'
+        uses: actions/deploy-pages@v4
