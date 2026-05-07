@@ -25,10 +25,23 @@
 
         .btn-alt-custom { background: #3461ad; border: none; font-weight: 600; padding: 4px 12px; }
 
+        .dropdown-menu { background: #2d2d2d; border: 1px solid #444; }
+        .dropdown-item { color: #ddd; font-size: 0.9rem; }
+        .dropdown-item:hover { background: #3d3d3d; color: #fff; }
+        
+
         #display-panel {
             padding: 5px;
         }
 
+        #canvas-header { 
+            background: #1a1a1a; 
+            padding: 4px 10px; 
+            display: flex; 
+            justify-content: space-between; /* This pushes the title left and the button-div right */
+            align-items: center; 
+            border-bottom: 1px solid #333; 
+        }
         canvas { background: #222; width: 400px; height: 300px; margin: 20px auto; border: 2px solid #444; image-rendering: pixelated; }
         canvas:focus {
             outline: 2px solid #3461ad;
@@ -62,14 +75,28 @@
 
 <nav class="navbar navbar-expand navbar-dark">
     <div class="collapse navbar-collapse">
-        <div class="d-flex align-items-center me-auto">
-            <button type="button" class="btn btn-sm btn-primary-custom me-3" onclick="assembleAndRun()">
-                <i data-feather="play-circle"></i> Assemble & Run
-            </button>
-            <button type="button" class="btn btn-sm btn-alt-custom me-3" onclick="resetVM()">
-                <i data-feather="repeat"></i> Reset VM
-            </button>
-        </div>
+        <ul class="navbar-nav me-3">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">File</a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" onclick="newFile()"><i data-feather="file-plus" class="me-2" style="width:14px"></i>New</a></li>
+                    <li><a class="dropdown-item" onclick="openFile()"><i data-feather="folder" class="me-2" style="width:14px"></i>Open</a></li>
+                    <li><a class="dropdown-item" onclick="saveFile()"><i data-feather="save" class="me-2" style="width:14px"></i>Save</a></li>
+                </ul>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">System</a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" onclick="loadCustomROM()"><i data-feather="cpu" class="me-2" style="width:14px"></i>Load ROM</a></li>
+                </ul>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Assembler</a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" onclick="assembleAs()"><i data-feather="package" class="me-2" style="width:14px"></i>Assemble As...</a></li>
+                </ul>
+            </li>
+        </ul>
 
        <div class="d-flex align-items-center">
             <span class="text-secondary small">
@@ -99,7 +126,20 @@ MSG: DB "HELLO Z80 WORLD!", 0
         </textarea>
     </div>
     <div id="display-panel">
-        <canvas id="vmCanvas" width="256" height="192" tabindex="0"></canvas>
+        <div id="canvas-wrapper">
+            <div id="canvas-header">
+                <span class="text-secondary small text-uppercase fw-bold" style="letter-spacing: 1px;">Console Output</span>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-link btn-sm text-secondary p-0 me-2" onclick="assembleAndRun()" title="Run">
+                        <i data-feather="play-circle" style="width: 14px;"></i>
+                    </button>
+                    <button class="btn btn-link btn-sm text-secondary p-0" onclick="resetVM()" title="Reset">
+                        <i data-feather="repeat" style="width: 14px;"></i>
+                    </button>
+                </div>
+            </div>
+            <canvas id="vmCanvas" width="256" height="192" tabindex="0"></canvas>
+        </div>
         <div id="console-wrapper">
             <div id="console-header">
                 <span class="text-secondary small text-uppercase fw-bold" style="letter-spacing: 1px;">Output Log</span>
@@ -391,6 +431,126 @@ MSG: DB "HELLO Z80 WORLD!", 0
         feather.replace();
     }
 
+    // --- File Management ---
+    function newFile() {
+        if (confirm("Clear current editor? Unsaved changes will be lost.")) {
+            editor.setValue("");
+            log("New file created.");
+        }
+    }
+
+    async function openFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.asm, .txt, .s';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = readerEvent => {
+                editor.setValue(readerEvent.target.result);
+                log(`Loaded: ${file.name}`);
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    async function saveFile() {
+        const content = editor.getValue();
+        
+        // Check if the browser supports the modern API
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'program.asm',
+                    types: [{
+                        description: 'Assembly Files',
+                        accept: { 'text/plain': ['.asm', '.s'] },
+                    }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                log("File saved successfully.");
+            } catch (err) {
+                log("Save cancelled or failed.");
+            }
+        } else {
+            const blob = new Blob([editor.getValue()], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'project.asm';
+            a.click();
+            URL.revokeObjectURL(url);
+            log("Source saved.");
+        }
+    }
+
+    // --- System Management ---
+    async function loadCustomROM() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.rom, .bin';
+        input.onchange = async e => {
+            const file = e.target.files[0];
+            const data = await file.arrayBuffer();
+            const rom = new Uint8Array(data);
+            
+            // Clear existing ROM area (0x0000 - 0x3FFF)
+            for(let i=0; i < 16384; i++) memory[i] = 0;
+            
+            // Load new ROM
+            for(let i=0; i < rom.length; i++) {
+                if (i < 16384) memory[i] = rom[i];
+            }
+            
+            log(`Custom ROM loaded: ${file.name}`);
+            resetVM(); // Trigger CPU restart to load new entry point
+        };
+        input.click();
+    }
+
+    // --- Assembler Management ---
+    async function assembleAs() {
+        log("Assembling to binary...");
+        try {
+            // 1. Run the assembly process as usual
+            pasmo.FS.writeFile('temp.asm', editor.getValue());
+            pasmo.callMain(['--bin', 'temp.asm', 'out.p']);
+            const binary = pasmo.FS.readFile('out.p'); 
+
+            // 2. Check for Native File System API support
+            if ('showSaveFilePicker' in window) {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'compiled.rom',
+                    types: [{
+                        description: 'Z80 Binary Files',
+                        accept: { 'application/octet-stream': ['.rom', '.bin', '.out'] },
+                    }],
+                });
+
+                // 3. Create a writable stream and save the WASM buffer
+                const writable = await handle.createWritable();
+                await writable.write(binary);
+                await writable.close();
+                
+                log(`Assembly successful. Saved to disk.`);
+            } else {
+                // Fallback for browsers like Firefox
+                const blob = new Blob([binary], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'compiled.rom';
+                a.click();
+                URL.revokeObjectURL(url);
+                log("Assembly successful (Standard Download).");
+            }
+        } catch (e) {
+            log("Assembly Failed: " + e.message);
+        }
+    }
 </script>
 
 </body>
