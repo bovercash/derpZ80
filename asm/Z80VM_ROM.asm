@@ -17,12 +17,15 @@ ORG $0028
 JP GETK             ; $0018: Get key from port (returns in A)
 ORG $0030
 JP WAIT_FOR_KEY     ; $0030: Wait for Key press (returns in A)
+ORG $0038
+JP SET_SCRMODE		; $0038: Set Screen Mode to value in A
 
 ; --- CONSTANTS ---
 VRAM_START  EQU $4000
 VRAM_SIZE   EQU 768       ; 32x24
 CURSOR_X    EQU $7F00
 CURSOR_Y    EQU $7F01
+SCRMODE		EQU $7F02
 
 ; =================================================================
 ; BOOT & INIT
@@ -138,3 +141,7 @@ WAIT_FOR_KEY:
     OR A          ; Check if A is 0
     JR Z, WAIT_FOR_KEY ; Loop if no key pressed
     RET           ; Key is now in A
+    
+SET_SCRMODE:
+	LD (SCRMODE), A
+	RET

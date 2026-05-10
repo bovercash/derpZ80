@@ -28,14 +28,18 @@ jobs:
 
       - name: Fetch JS Dependencies
         run: |
-          mkdir -p ./dist/lib/roms
+          mkdir -p ./dist/lib
           curl -L https://raw.githubusercontent.com/DrGoldfire/Z80.js/refs/heads/master/Z80.js -o ./dist/lib/Z80.js
 
       - name: Prepare Final Site
         run: |
+          mkdir -p ./dist/src
+          cp src/* ./dist/src/
+          mkdir -p ./dist/asm
+          cp asm/* ./dist/asm/
+          mkdir -p ./dist/roms
+          cp roms/* ./dist/roms/
           cp index.html ./dist/
-          cp Z80VM_ROM.asm ./dist/
-          cp Z80VM.ROM ./dist/
 
       - name: Upload Pages Artifact
         if: env.ACT != 'true'

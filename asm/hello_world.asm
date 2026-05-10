@@ -1,0 +1,13 @@
+ORG $8000
+    LD HL, MSG
+LOOP:
+    LD A, (HL)
+    CP 0
+    JR Z, FIN     ; JUMP TO END OF PROGRAM
+    CALL $0010    ; ROM PUTC
+    INC HL
+    JR LOOP
+FIN:
+    HALT
+
+MSG: DB "HELLO Z80 WORLD!", 0
